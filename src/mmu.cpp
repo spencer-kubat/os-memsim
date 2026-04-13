@@ -1,4 +1,5 @@
 #include <iostream>
+#include <cstdint>
 #include <algorithm>
 #include "mmu.h"
 
@@ -35,9 +36,9 @@ void Mmu::addVariableToProcess(uint32_t pid, std::string var_name, DataType type
 {
     int i;
     Process *proc = NULL;
-    std::vector<Process*>::iterator it = std::find_if(_processes.begin(), _processes.end(), [search_id](Process* p)
+    std::vector<Process*>::iterator it = std::find_if(_processes.begin(), _processes.end(), [pid](Process* p)
     { 
-        return p != nullptr && p->pid == search_id; 
+        return p != nullptr && p->pid == pid; 
     });
 
     if (proc != NULL)
