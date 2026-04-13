@@ -1,6 +1,7 @@
 #include <iostream>
 #include <algorithm>
 #include "mmu.h"
+#include <cstdint>
 
 Mmu::Mmu(int memory_size)
 {
@@ -10,6 +11,7 @@ Mmu::Mmu(int memory_size)
 
 Mmu::~Mmu()
 {
+    
 }
 
 uint32_t Mmu::createProcess()
