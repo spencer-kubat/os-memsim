@@ -80,6 +80,12 @@ void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table
     //   - create new process in the MMU
     //   - allocate new variables for the <TEXT>, <GLOBALS>, and <STACK>
     //   - print pid
+
+    uint32_t pid = mmu->createProcess();
+    allocateVariable(pid, "<TEXT>", DataType::Char, text_size, mmu, page_table);
+    allocateVariable(pid, "<GLOBALS>", DataType::Char, data_size, mmu, page_table);
+    allocateVariable(pid, "<STACK>", DataType::Char, 65536, mmu, page_table);
+    std::cout << pid << std::endl;
 }
 
 void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table)
@@ -89,6 +95,7 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
     //   - if no hole is large enough, allocate new page(s)
     //   - insert variable into MMU
     //   - print virtual memory address
+       
 }
 
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, uint8_t *memory)
