@@ -5,7 +5,7 @@
 
 Mmu::Mmu(int memory_size)
 {
-    _next_pid = 1024;
+    _next_pid = 1024; 
     _max_size = memory_size;
 }
 
@@ -33,6 +33,35 @@ uint32_t Mmu::createProcess()
     return proc->pid;
 }
 
+uint32_t Mmu::getFreeSpace(uint32_t pid, uint32_t size)
+{
+    Process *proc = NULL;
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid)
+        {
+            proc = _processes[i];
+            break;    
+        }
+    }
+
+    for (int i = 0; i < proc->variables.size(); i++)
+    {
+        Variable *var = proc->variables[i];
+        if (var->type == DataType::FreeSpace && var->size >= size)
+        {
+            uint32_t address = var->virtual_address;
+
+            // shrink/shift free space to accomodate size
+            var->virtual_address += size;
+            var->size -= size;
+            return address;
+        }
+    }
+
+    return -1;
+}
+
 void Mmu::addVariableToProcess(uint32_t pid, std::string var_name, DataType type, uint32_t size, uint32_t address)
 {
     int i;
@@ -42,7 +71,8 @@ void Mmu::addVariableToProcess(uint32_t pid, std::string var_name, DataType type
         return p != nullptr && p->pid == pid; 
     });
 
-    if (proc != NULL)
+    proc = *it;
+    if (it != _processes.end())
     {
         Variable *var = new Variable();
         var->name = var_name;

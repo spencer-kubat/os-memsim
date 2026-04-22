@@ -30,6 +30,7 @@ public:
     ~Mmu();
 
     uint32_t createProcess();
+    uint32_t getFreeSpace(uint32_t pid, uint32_t size);
     void addVariableToProcess(uint32_t pid, std::string var_name, DataType type, uint32_t size, uint32_t address);
     void print();
 };

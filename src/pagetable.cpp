@@ -37,6 +37,16 @@ void PageTable::addEntry(uint32_t pid, int page_number)
     _table[entry] = frame;
 }
 
+int PageTable::getPageSize()
+{
+    return _page_size;
+}
+
+bool PageTable::hasEntry(uint32_t pid, int page_number)
+{
+    return false;
+}
+
 int PageTable::getPhysicalAddress(uint32_t pid, uint32_t virtual_address)
 {
     // Convert virtual address to page_number and page_offset

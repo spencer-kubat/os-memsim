@@ -96,6 +96,30 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
     //   - insert variable into MMU
     //   - print virtual memory address
        
+    uint32_t var_size = num_elements; // default to char size
+    if (type == DataType::Short) var_size = num_elements * 2;
+    else if (type == DataType::Int || type == DataType::Float) var_size = num_elements * 4;
+    else if (type == DataType::Long || type == DataType::Double) var_size = num_elements * 8;
+
+    uint32_t virtual_address = mmu->getFreeSpace(pid, var_size);
+    if (virtual_address == (uint32_t)-1)
+    {
+        std::cout << "error: not enough memory" << std::endl;
+        return;
+    }
+
+    // find how many pages needed for variable (see if we need to add any)
+    int page_size = page_table->getPageSize();
+    int first_page = virtual_address / page_size;
+    int last_page = (virtual_address + var_size - 1) / page_size;
+
+    for (int i = first_page; i <= last_page; i++)
+    {
+        if (!page_table->hasEntry(pid, i)) page_table->addEntry(pid, i);
+    }
+
+    mmu->addVariableToProcess(pid, var_name, type, var_size, virtual_address);
+    std::cout << virtual_address << std::endl;
 }
 
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, uint8_t *memory)
