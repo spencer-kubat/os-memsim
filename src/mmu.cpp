@@ -62,6 +62,107 @@ uint32_t Mmu::getFreeSpace(uint32_t pid, uint32_t size)
     return -1;
 }
 
+Variable* Mmu::getVariable(uint32_t pid, std::string var_name)
+{
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid)
+        {
+            for (int j = 0; j < _processes[i]->variables.size(); j++)
+            {
+                if (_processes[i]->variables[j]->name == var_name)
+                {
+                    return _processes[i]->variables[j];
+                }
+            }
+        }
+    }
+    return NULL;
+}
+
+void Mmu::removeProcess(uint32_t pid)
+{
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid)
+        {
+            // free each variable in the process
+            for (int j = 0; j < _processes[i]->variables.size(); j++)
+            {
+                delete _processes[i]->variables[j];
+            }
+            delete _processes[i];
+            _processes.erase(_processes.begin() + i);
+            return;
+        }
+    }
+}
+
+std::vector<std::string> Mmu::getVariableNames(uint32_t pid)
+{
+    std::vector<std::string> names;
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid)
+        {
+            for (int j = 0; j < _processes[i]->variables.size(); j++)
+            {
+                // skip free space entries
+                if (_processes[i]->variables[j]->type != DataType::FreeSpace)
+                {
+                    names.push_back(_processes[i]->variables[j]->name);
+                }
+            }
+        }
+    }
+    return names;
+}
+
+void Mmu::freeVariable(uint32_t pid, std::string var_name)
+{
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid)
+        {
+            for (int j = 0; j < _processes[i]->variables.size(); j++)
+            {
+                if (_processes[i]->variables[j]->name == var_name)
+                {
+                    // convert to free space instead of removing
+                    _processes[i]->variables[j]->name = "<FREE_SPACE>";
+                    _processes[i]->variables[j]->type = DataType::FreeSpace;
+                    return;
+                }
+            }
+        }
+    }
+}
+
+bool Mmu::isPageFree(uint32_t pid, int page_number, int page_size)
+{
+    int page_start = page_number * page_size;
+    int page_end = page_start + page_size - 1;
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid)
+        {
+            for (int j = 0; j < _processes[i]->variables.size(); j++)
+            {
+                Variable *var = _processes[i]->variables[j];
+                // skip free space entries
+                if (var->type == DataType::FreeSpace) continue;
+
+                // check if variable overlaps with page
+                uint32_t var_start = var->virtual_address;
+                uint32_t var_end = var->virtual_address + var->size - 1;
+
+                if (var_start <= page_end && var_end >= page_start) return false; // page still has content
+            }
+        }
+    }
+    return true; // nothing on this page
+}
+
 void Mmu::addVariableToProcess(uint32_t pid, std::string var_name, DataType type, uint32_t size, uint32_t address)
 {
     int i;

@@ -76,11 +76,6 @@ void printStartMessage(int page_size)
 
 void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - create new process in the MMU
-    //   - allocate new variables for the <TEXT>, <GLOBALS>, and <STACK>
-    //   - print pid
-
     uint32_t pid = mmu->createProcess();
     allocateVariable(pid, "<TEXT>", DataType::Char, text_size, mmu, page_table);
     allocateVariable(pid, "<GLOBALS>", DataType::Char, data_size, mmu, page_table);
@@ -90,12 +85,6 @@ void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table
 
 void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - find first free space within a page already allocated to this process that is large enough to fit the new variable
-    //   - if no hole is large enough, allocate new page(s)
-    //   - insert variable into MMU
-    //   - print virtual memory address
-       
     uint32_t var_size = num_elements; // default to char size
     if (type == DataType::Short) var_size = num_elements * 2;
     else if (type == DataType::Int || type == DataType::Float) var_size = num_elements * 4;
@@ -124,23 +113,49 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
 
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, uint8_t *memory)
 {
-    // TODO: implement this!
-    //   - look up physical address for variable based on its virtual address / offset
-    //   - insert `value` into `memory` at physical address
-    //   * note: this function only handles a single element (i.e. you'll need to call this within a loop when setting
-    //           multiple elements of an array)
+    Variable *var = mmu->getVariable(pid, var_name);
+    if (var == NULL)
+    {
+        std::cout << "error: variable not found" << std::endl;
+        return;
+    }
+
+    uint32_t element_size = 1;
+    if (var->type == DataType::Short) element_size = 2;
+    else if (var->type == DataType::Int || var->type == DataType::Float) element_size = 4;
+    else if (var->type == DataType::Long || var->type == DataType::Double) element_size = 8;
+
+    uint32_t element_virtual_address = var->virtual_address + (offset * element_size);
+    int physical_address = page_table->getPhysicalAddress(pid, element_virtual_address);
+
+    memcpy(memory + physical_address, value, element_size);
 }
 
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - remove entry from MMU
-    //   - free page if this variable was the only one on a given page
+    Variable *var = mmu->getVariable(pid, var_name);
+    if (var == NULL)
+    {
+        std::cout << "error: variable not found" << std::endl;
+        return;
+    }
+    mmu->freeVariable(pid, var_name);
+    int page_size = page_table->getPageSize();
+    int first_page = var->virtual_address / page_size;
+    int last_page = (var->virtual_address + var->size - 1) / page_size;
+
+    for (int i = first_page; i <= last_page; i++)
+    {
+        if (mmu->isPageFree(pid, i, page_size)) page_table->removeEntry(pid, i);
+    }
 }
 
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table)
 {
-    // TODO: implement this!
-    //   - remove process from MMU
-    //   - free all pages associated with given process
+    std::vector<std::string> variables = mmu->getVariableNames(pid);
+    for (int i = 0; i < variables.size(); i++)
+    {
+        freeVariable(pid, variables[i], mmu, page_table);
+    }
+    mmu->removeProcess(pid);
 }
