@@ -1,6 +1,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstring>
+#include <sstream>
 #include <string>
 #include "mmu.h"
 #include "pagetable.h"
@@ -43,6 +44,106 @@ int main(int argc, char **argv)
     {
         // Handle command
         // TODO: implement this!
+        std::stringstream ss(command);
+        std::string cmd;
+        ss >> cmd;
+
+        if (cmd == "create")
+        {
+            int text_size, data_size;
+            ss >> text_size >> data_size;
+            createProcess(text_size, data_size, mmu, page_table);
+        }
+
+        else if (cmd == "allocate")
+        {
+            uint32_t pid;
+
+            std::string var_name;
+            std::string type_string;
+            uint32_t num_elements;
+
+            ss >> pid >> var_name >> type_string >> num_elements;
+            DataType type;
+
+            if (type_string == "char") type = DataType::Char;
+
+            else if (type_string == "short") type = DataType::Short;
+
+            else if (type_string == "int") type = DataType::Int;
+
+            else if (type_string == "float") type = DataType::Float;
+
+            else if (type_string == "long") type = DataType::Long;
+
+            else if (type_string == "double") type = DataType::Double;
+
+            else
+            {
+                std::cout << "error: invalid data type" << std::endl;
+                std::cout << "> ";
+                std::getline(std::cin, command);
+                continue;
+            }
+
+            allocateVariable(pid, var_name, type, num_elements, mmu, page_table);
+        }
+
+        else if (cmd == "set")
+        {
+            uint32_t pid;
+            std::string var_name;
+            uint32_t offset;
+
+            ss >> pid >> var_name >> offset;
+
+            std::string value;
+            uint32_t current_offset = offset;
+
+            if (ss >> value)
+            {
+                setVariable(pid, var_name, current_offset, &value, mmu, page_table, memory);
+                current_offset++;
+            }
+        }
+
+        else if (cmd == "free")
+        {
+            uint32_t pid;
+
+            std::string var_name;
+            ss >> pid >> var_name;
+            freeVariable(pid, var_name, mmu, page_table);
+        }
+
+        else if (cmd == "terminate")
+        {
+            uint32_t pid;
+            ss >> pid;
+            terminateProcess(pid, mmu, page_table);
+        }
+
+        else if (cmd == "print")
+        {
+            std::string object;
+            ss >> object;
+
+            if (object == "mmu") mmu->print();
+
+            else if (object == "page") page_table->print();
+        
+            else if (object == "processes")
+            {
+
+            }
+
+            
+
+            else
+            {
+                std::cout << "error: command not recognized" << std::endl;
+            }
+        }
 
         // Get next command
         std::cout << "> ";

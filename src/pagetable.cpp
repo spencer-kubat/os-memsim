@@ -1,6 +1,9 @@
 #include <algorithm>
 #include "pagetable.h"
 #include <cstdint>
+#include <sstream>
+#include <iostream>
+#include <iomanip>
 
 PageTable::PageTable(int page_size)
 {
@@ -73,7 +76,8 @@ int PageTable::getPageSize()
 
 bool PageTable::hasEntry(uint32_t pid, int page_number)
 {
-    return false;
+    std::string entry = std::to_string(pid) + "|" + std::to_string(page_number);    // Maps page to frame
+    return _table.count(entry) > 0;
 }
 
 int PageTable::getPhysicalAddress(uint32_t pid, uint32_t virtual_address)
@@ -108,5 +112,12 @@ void PageTable::print()
     for (i = 0; i < keys.size(); i++)
     {
         // TODO: print all pages
+        std::stringstream ss(keys[i]);
+        std::string pid_str, page_number_str;
+        std::getline(ss, pid_str, '|');
+        std::getline(ss, page_number_str, '|');
+
+        int frame = _table[keys[i]];
+        std::cout << std::setw(5) << pid_str << " | " << std::setw(11) << page_number_str << " | " << std::setw(12) << frame << std::endl;
     }
 }
