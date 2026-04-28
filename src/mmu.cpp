@@ -3,6 +3,7 @@
 #include "mmu.h"
 #include <cstdint>
 #include <sstream>
+#include <iomanip>
 
 Mmu::Mmu(int memory_size)
 {
@@ -195,6 +196,16 @@ void Mmu::print()
         for (j = 0; j < _processes[i]->variables.size(); j++)
         {
             // TODO: print all variables (excluding those of type DataType::FreeSpace)
+            Variable *var = _processes[i]->variables[j];
+            if (var->type != DataType::FreeSpace)
+            {
+                std::cout << std::setw(5) << _processes[i]->pid << " | "
+                          << std::setw(13) << std::left << var->name << std::right << " | "
+                          << "   0x" << std::uppercase << std::hex << std::setw(8)
+                          << std::setfill('0') << var->virtual_address
+                          << std::dec << std::setfill(' ') << " | "
+                          << std::setw(10) << var->size << std::endl;
+            }
         }
     }
 }
