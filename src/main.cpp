@@ -94,16 +94,45 @@ int main(int argc, char **argv)
             uint32_t pid;
             std::string var_name;
             uint32_t offset;
-
             ss >> pid >> var_name >> offset;
 
+            std::vector<std::string> values;
             std::string value;
-            uint32_t current_offset = offset;
-
             while (ss >> value)
             {
-                setVariable(pid, var_name, current_offset, value, mmu, page_table, memory);
-                current_offset++;
+                values.push_back(value);
+            }
+
+            if (!mmu->processExists(pid))
+            {
+                std::cout << "error: process not found" << std::endl;
+            }
+            else
+            {
+                Variable *var = mmu->getVariable(pid, var_name);
+                if (var == NULL)
+                {
+                    std::cout << "error: variable not found" << std::endl;
+                }
+                else
+                {
+                    uint32_t element_size = 1;
+                    if (var->type == DataType::Short) element_size = 2;
+                    else if (var->type == DataType::Int || var->type == DataType::Float) element_size = 4;
+                    else if (var->type == DataType::Long || var->type == DataType::Double) element_size = 8;
+
+                    if ((offset + values.size()) * element_size > var->size)
+                    {
+                        std::cout << "error: index out of range" << std::endl;
+                    }
+                    else
+                    {
+                        for (int i = 0; i < values.size(); i++)
+                        {
+                            setVariable(pid, var_name, offset + i, values[i], mmu, page_table, memory);
+                        }
+                    }
+                }
             }
         }
 
@@ -164,7 +193,10 @@ int main(int argc, char **argv)
                         else if (var->type == DataType::Int || var->type == DataType::Float) element_size = 4;
                         else if (var->type == DataType::Long || var->type == DataType::Double) element_size = 8;
 
-                        for (uint32_t i = 0; i < var->size / element_size; i++)
+                        uint32_t num_elements = var->size / element_size;
+                        uint32_t print_count = (num_elements > 4) ? 4 : num_elements;
+
+                        for (uint32_t i = 0; i < print_count; i++)
                         {
                             uint32_t virtual_addr = var->virtual_address + (i * element_size);
                             int physical_addr = page_table->getPhysicalAddress(pid, virtual_addr);
@@ -172,10 +204,17 @@ int main(int argc, char **argv)
                             if (i > 0) std::cout << ", ";
 
                             if (var->type == DataType::Char) std::cout << *(char*)(memory + physical_addr);
+                            else if (var->type == DataType::Short) std::cout << *(short*)(memory + physical_addr);
                             else if (var->type == DataType::Int) std::cout << *(int*)(memory + physical_addr);
+                            else if (var->type == DataType::Float) std::cout << *(float*)(memory + physical_addr);
+                            else if (var->type == DataType::Long) std::cout << *(long*)(memory + physical_addr);
                             else if (var->type == DataType::Double) std::cout << *(double*)(memory + physical_addr);
                         }
 
+                        if (num_elements > 4)
+                        {
+                            std::cout << ", ... [" << num_elements << " items]";
+                        }
                         std::cout << std::endl;
                     }
                 }
