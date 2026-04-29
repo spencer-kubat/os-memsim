@@ -78,6 +78,7 @@ Variable* Mmu::getVariable(uint32_t pid, std::string var_name)
             }
         }
     }
+
     return NULL;
 }
 
@@ -117,6 +118,16 @@ std::vector<std::string> Mmu::getVariableNames(uint32_t pid)
         }
     }
     return names;
+}
+
+std::vector<uint32_t> Mmu::getPids()
+{
+    std::vector<uint32_t> pids;
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        pids.push_back(_processes[i]->pid);
+    }
+    return pids;
 }
 
 void Mmu::freeVariable(uint32_t pid, std::string var_name)

@@ -11,8 +11,8 @@
 
 void printStartMessage(int page_size);
 void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table);
-void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table);
-void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, uint8_t *memory);
+void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table, bool print_addr);
+void setVariable(uint32_t pid, std::string var_name, uint32_t offset, std::string value, Mmu *mmu, PageTable *page_table, uint8_t *memory);
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table);
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table);
 
@@ -86,7 +86,7 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            allocateVariable(pid, var_name, type, num_elements, mmu, page_table);
+            allocateVariable(pid, var_name, type, num_elements, mmu, page_table, true);
         }
 
         else if (cmd == "set")
@@ -100,9 +100,9 @@ int main(int argc, char **argv)
             std::string value;
             uint32_t current_offset = offset;
 
-            if (ss >> value)
+            while (ss >> value)
             {
-                setVariable(pid, var_name, current_offset, &value, mmu, page_table, memory);
+                setVariable(pid, var_name, current_offset, value, mmu, page_table, memory);
                 current_offset++;
             }
         }
@@ -134,14 +134,55 @@ int main(int argc, char **argv)
         
             else if (object == "processes")
             {
+                std::vector<uint32_t> pids = mmu->getPids();
 
+                for (int i = 0; i < pids.size(); i++)
+                {
+                    std::cout << pids[i] << std::endl;
+                }
             }
-
-            
 
             else
             {
-                std::cout << "error: command not recognized" << std::endl;
+                size_t colon_pos = object.find(":");
+
+                if (colon_pos != std::string::npos)
+                {
+                    uint32_t pid = std::stoi(object.substr(0, colon_pos));
+                    std::string var_name = object.substr(colon_pos + 1);
+                    Variable *var = mmu->getVariable(pid, var_name);
+                    
+                    if (var == NULL)
+                    {
+                        std::cout << "error: variable not found" << std::endl;
+                    }
+
+                    else
+                    {
+                        uint32_t element_size = 1;
+                        if (var->type == DataType::Short) element_size = 2;
+                        else if (var->type == DataType::Int || var->type == DataType::Float) element_size = 4;
+                        else if (var->type == DataType::Long || var->type == DataType::Double) element_size = 8;
+
+                        for (uint32_t i = 0; i < var->size / element_size; i++)
+                        {
+                            uint32_t virtual_addr = var->virtual_address + (i * element_size);
+                            int physical_addr = page_table->getPhysicalAddress(pid, virtual_addr);
+
+                            if (i > 0) std::cout << ", ";
+
+                            if (var->type == DataType::Char) std::cout << *(char*)(memory + physical_addr);
+                            else if (var->type == DataType::Int) std::cout << *(int*)(memory + physical_addr);
+                            else if (var->type == DataType::Double) std::cout << *(double*)(memory + physical_addr);
+                        }
+
+                        std::cout << std::endl;
+                    }
+                }
+                else
+                {
+                    std::cout << "error: command not recognized" << std::endl;
+                }
             }
         }
 
@@ -178,13 +219,13 @@ void printStartMessage(int page_size)
 void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table)
 {
     uint32_t pid = mmu->createProcess();
-    allocateVariable(pid, "<TEXT>", DataType::Char, text_size, mmu, page_table);
-    allocateVariable(pid, "<GLOBALS>", DataType::Char, data_size, mmu, page_table);
-    allocateVariable(pid, "<STACK>", DataType::Char, 65536, mmu, page_table);
+    allocateVariable(pid, "<TEXT>", DataType::Char, text_size, mmu, page_table, false);
+    allocateVariable(pid, "<GLOBALS>", DataType::Char, data_size, mmu, page_table, false);
+    allocateVariable(pid, "<STACK>", DataType::Char, 65536, mmu, page_table, false);
     std::cout << pid << std::endl;
 }
 
-void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table)
+void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table, bool print_addr)
 {
     uint32_t var_size = num_elements; // default to char size
     if (type == DataType::Short) var_size = num_elements * 2;
@@ -209,10 +250,13 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
     }
 
     mmu->addVariableToProcess(pid, var_name, type, var_size, virtual_address);
-    std::cout << virtual_address << std::endl;
+    if (print_addr)
+    {
+        std::cout << virtual_address << std::endl;
+    }
 }
 
-void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *value, Mmu *mmu, PageTable *page_table, uint8_t *memory)
+void setVariable(uint32_t pid, std::string var_name, uint32_t offset, std::string value, Mmu *mmu, PageTable *page_table, uint8_t *memory)
 {
     Variable *var = mmu->getVariable(pid, var_name);
     if (var == NULL)
@@ -226,10 +270,50 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, void *valu
     else if (var->type == DataType::Int || var->type == DataType::Float) element_size = 4;
     else if (var->type == DataType::Long || var->type == DataType::Double) element_size = 8;
 
+    if ((offset + 1) * element_size > var->size)
+    {
+        std::cout << "error: index out of range" << std::endl;
+        return;
+    }
+
     uint32_t element_virtual_address = var->virtual_address + (offset * element_size);
     int physical_address = page_table->getPhysicalAddress(pid, element_virtual_address);
 
-    memcpy(memory + physical_address, value, element_size);
+    if (var->type == DataType::Char) 
+    {
+        char v = value[0];
+        memcpy(memory + physical_address, &v, element_size);
+    }
+
+    else if (var->type == DataType::Int) 
+    {
+        int v = std::stoi(value);
+        memcpy(memory + physical_address, &v, element_size);
+    }
+
+    else if (var->type == DataType::Float) 
+    {
+        float v = std::stof(value);
+        memcpy(memory + physical_address, &v, element_size);
+    }
+
+    else if (var->type == DataType::Long) 
+    {
+        long v = std::stol(value);
+        memcpy(memory + physical_address, &v, element_size);
+    }
+
+    else if (var->type == DataType::Double) 
+    {
+        double v = std::stod(value);
+        memcpy(memory + physical_address, &v, element_size);
+    }
+    
+    else if (var->type == DataType::Short) 
+    {
+        short v = std::stoi(value);
+        memcpy(memory + physical_address, &v, element_size);
+    }
 }
 
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table)

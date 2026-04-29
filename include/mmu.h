@@ -33,6 +33,7 @@ public:
     uint32_t getFreeSpace(uint32_t pid, uint32_t size);
     Variable* getVariable(uint32_t pid, std::string var_name);
     std::vector<std::string> getVariableNames(uint32_t pid);
+    std::vector<uint32_t> getPids();
     void removeProcess(uint32_t pid);
     bool isPageFree(uint32_t pid, int page_number, int page_size);
     void freeVariable(uint32_t pid, std::string var_name);
