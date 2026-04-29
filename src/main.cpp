@@ -186,6 +186,11 @@ int main(int argc, char **argv)
             }
         }
 
+        else
+        {
+            std::cout << "error: command not recognized" << std::endl;
+        }
+
         // Get next command
         std::cout << "> ";
         std::getline(std::cin, command);
@@ -228,6 +233,19 @@ void createProcess(int text_size, int data_size, Mmu *mmu, PageTable *page_table
 void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_t num_elements, Mmu *mmu, PageTable *page_table, bool print_addr)
 {
     uint32_t var_size = num_elements; // default to char size
+    
+    if (!mmu->processExists(pid))
+    {
+        std::cout << "error: process not found" << std::endl;
+        return;
+    }
+
+    if (mmu->variableExists(pid, var_name))
+    {
+        std::cout << "error: variable already exists" << std::endl;
+        return;
+    }
+
     if (type == DataType::Short) var_size = num_elements * 2;
     else if (type == DataType::Int || type == DataType::Float) var_size = num_elements * 4;
     else if (type == DataType::Long || type == DataType::Double) var_size = num_elements * 8;
@@ -258,6 +276,12 @@ void allocateVariable(uint32_t pid, std::string var_name, DataType type, uint32_
 
 void setVariable(uint32_t pid, std::string var_name, uint32_t offset, std::string value, Mmu *mmu, PageTable *page_table, uint8_t *memory)
 {
+    if (!mmu->processExists(pid))
+    {
+        std::cout << "error: process not found" << std::endl;
+        return;
+    }
+
     Variable *var = mmu->getVariable(pid, var_name);
     if (var == NULL)
     {
@@ -308,7 +332,7 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, std::strin
         double v = std::stod(value);
         memcpy(memory + physical_address, &v, element_size);
     }
-    
+
     else if (var->type == DataType::Short) 
     {
         short v = std::stoi(value);
@@ -318,12 +342,19 @@ void setVariable(uint32_t pid, std::string var_name, uint32_t offset, std::strin
 
 void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_table)
 {
+    if (!mmu->processExists(pid))
+    {
+        std::cout << "error: process not found" << std::endl;
+        return;
+    }
+
     Variable *var = mmu->getVariable(pid, var_name);
     if (var == NULL)
     {
         std::cout << "error: variable not found" << std::endl;
         return;
     }
+
     mmu->freeVariable(pid, var_name);
     int page_size = page_table->getPageSize();
     int first_page = var->virtual_address / page_size;
@@ -337,6 +368,12 @@ void freeVariable(uint32_t pid, std::string var_name, Mmu *mmu, PageTable *page_
 
 void terminateProcess(uint32_t pid, Mmu *mmu, PageTable *page_table)
 {
+    if (!mmu->processExists(pid))
+    {
+        std::cout << "error: process not found" << std::endl;
+        return;
+    }
+    
     std::vector<std::string> variables = mmu->getVariableNames(pid);
     for (int i = 0; i < variables.size(); i++)
     {

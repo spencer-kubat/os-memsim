@@ -36,6 +36,8 @@ public:
     std::vector<uint32_t> getPids();
     void removeProcess(uint32_t pid);
     bool isPageFree(uint32_t pid, int page_number, int page_size);
+    bool processExists(uint32_t pid);
+    bool variableExists(uint32_t pid, std::string var_name);
     void freeVariable(uint32_t pid, std::string var_name);
     void addVariableToProcess(uint32_t pid, std::string var_name, DataType type, uint32_t size, uint32_t address);
     void print();

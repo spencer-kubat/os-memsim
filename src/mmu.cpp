@@ -46,6 +46,11 @@ uint32_t Mmu::getFreeSpace(uint32_t pid, uint32_t size)
         }
     }
 
+    if (proc == NULL)
+    {
+        return -1;
+    }
+
     for (int i = 0; i < proc->variables.size(); i++)
     {
         Variable *var = proc->variables[i];
@@ -175,6 +180,21 @@ bool Mmu::isPageFree(uint32_t pid, int page_number, int page_size)
     return true; // nothing on this page
 }
 
+bool Mmu::processExists(uint32_t pid)
+{
+    for (int i = 0; i < _processes.size(); i++)
+    {
+        if (_processes[i]->pid == pid) return true;
+    }
+
+    return false;
+}
+
+bool Mmu::variableExists(uint32_t pid, std::string var_name)
+{
+    return getVariable(pid, var_name) != NULL;
+}
+
 void Mmu::addVariableToProcess(uint32_t pid, std::string var_name, DataType type, uint32_t size, uint32_t address)
 {
     int i;
@@ -184,9 +204,9 @@ void Mmu::addVariableToProcess(uint32_t pid, std::string var_name, DataType type
         return p != nullptr && p->pid == pid; 
     });
 
-    proc = *it;
     if (it != _processes.end())
     {
+        proc = *it;
         Variable *var = new Variable();
         var->name = var_name;
         var->type = type;
